@@ -1,0 +1,173 @@
+---
+title: "China Workplace Resilience Index (RI) and its Relationship with Macro Variables"
+author: "Zhan Wang"
+date: "2023-08-19"
+output: html_notebook
+---
+
+```{r}
+library(dplyr)
+library(lubridate)
+library(tidyverse)
+library(ggplot2)
+library(patchwork)
+
+```
+
+### Read Raw Data
+
+```{r}
+#library(readxl)
+#dat <- read_excel("data/rda_macro.xlsx")
+View(dat)
+names(dat)
+```
+
+### Select and Rename Useful Columns
+
+```{r}
+names(dat)[2] = "id"
+names(dat)[4] = "dt"
+names(dat)[46] = "rda"
+names(dat)[62:72] = paste("macro", 1:11, sep = "_")
+
+#library(dplyr)
+#library(lubridate)
+tmp = select(dat, id, dt, rda, macro_1:macro_11)
+#unique(tmp$dt)
+tmp$period = format(as.Date(tmp$dt), "%Y-%m")
+tmp$period = as.Date(paste(tmp$period, "-01", sep = ""))
+str(tmp)
+
+```
+### Drop the discontinued part and create TS
+
+```{r}
+#library(tidyverse)
+
+#sort(unique(tmp$period))
+tmp = filter(tmp, period >= "2020-08-01")
+#sort(unique(tmp$period))
+
+ts = tmp %>%
+  group_by(period) %>%
+  summarise(count = n(),
+            rda = mean(rda),
+            macro_1 = mean(macro_1),
+            macro_2 = mean(macro_2),
+            macro_3 = mean(macro_3),
+            macro_4 = mean(macro_4),
+            macro_5 = mean(macro_5),
+            macro_6 = mean(sqrt(macro_6))) %>%
+  filter(count >= 100) %>%
+  drop_na()
+
+print(tmp %>%
+  group_by(period) %>%
+  summarise(count = n(),
+            rda = mean(rda),
+            macro_1 = mean(macro_1),
+            macro_2 = mean(macro_2),
+            macro_3 = mean(macro_3),
+            macro_4 = mean(macro_4),
+            macro_5 = mean(macro_5),
+            macro_6 = mean(sqrt(macro_6))) %>%
+  filter(count < 100))
+  
+cor(ts$rda, ts$macro_1)
+cor(ts$rda, ts$macro_2)
+cor(ts$rda, ts$macro_3)
+cor(ts$rda, ts$macro_4)
+cor(ts$rda, ts$macro_5)
+cor(ts$rda, ts$macro_6)
+
+cor(ts$macro_3, ts$macro_5)
+cor(ts$macro_3, ts$macro_6)
+cor(ts$macro_5, ts$macro_6)
+
+```
+
+### Exploratory Plots
+
+```{r}
+#library(ggplot2)
+#library(patchwork)
+
+theme_set(theme_bw())
+
+scale1 = 1/2
+plt1 <- ggplot(ts, aes(x = period, y = rda)) +
+  geom_line(aes(color = "RDA")) +
+  geom_line(aes(y = macro_1 * scale1, color = "Macro 1")) +
+  scale_y_continuous(sec.axis = sec_axis(~.*scale1, name="Macro 1")) +
+  labs(x = "Period (month)", y = "Score", color = "") +
+  scale_x_date(date_breaks = "2 month") +
+  theme(axis.text.x=element_text(angle=60, hjust=1)) + 
+  scale_color_manual(values = c("gray50", "orange2")) +
+  ggtitle("RDA vs Macro 1 \ncor -0.01") 
+print(plt1)
+
+scale2 = 1/4
+plt2 <- ggplot(ts, aes(x = period, y = rda)) +
+  geom_line(aes(color = "RDA")) +
+  geom_line(aes(y = macro_2 * scale2, color = "Macro 2")) +
+  scale_y_continuous(sec.axis = sec_axis(~.*scale2, name="Macro 2")) +
+  labs(x = "Period (month)", y = "Score", color = "") +
+  scale_x_date(date_breaks = "2 month") +
+  theme(axis.text.x=element_text(angle=60, hjust=1)) + 
+  scale_color_manual(values = c("gray50", "orange2"))+
+  ggtitle("RDA vs Macro 2 \n cor 0.12") 
+print(plt2)
+
+scale3 = 1/4
+plt3 <- ggplot(ts, aes(x = period, y = rda)) +
+  geom_line(aes(color = "RDA")) +
+  geom_line(aes(y = macro_3 * scale3, color = "Macro 3")) +
+  scale_y_continuous(sec.axis = sec_axis(~.*scale3, name="Macro 3")) +
+  labs(x = "Period (month)", y = "Score", color = "") +
+  scale_x_date(date_breaks = "2 month") +
+  theme(axis.text.x=element_text(angle=60, hjust=1)) + 
+  scale_color_manual(values = c("gray50", "orange2"))+
+  ggtitle("RDA vs Macro 3 \n cor 0.42") 
+print(plt3)
+
+scale4 = 1/4
+plt4 <- ggplot(ts, aes(x = period, y = rda)) +
+  geom_line(aes(color = "RDA")) +
+  geom_line(aes(y = macro_4 * scale4, color = "Macro 4")) +
+  scale_y_continuous(sec.axis = sec_axis(~.*scale4, name="Macro 4")) +
+  labs(x = "Period (month)", y = "Score", color = "") +
+  scale_x_date(date_breaks = "2 month") +
+  theme(axis.text.x=element_text(angle=60, hjust=1)) + 
+  scale_color_manual(values = c("gray50", "orange2"))+
+  ggtitle("RDA vs Macro 4 \n cor -0.39") 
+print(plt4)
+
+scale5 = 1/4
+plt5 <- ggplot(ts, aes(x = period, y = rda)) +
+  geom_line(aes(color = "RDA")) +
+  geom_line(aes(y = macro_5 * scale5, color = "CPI")) +
+  scale_y_continuous(sec.axis = sec_axis(~.*scale5, name="CPI")) +
+  labs(x = "Period (month)", y = "Score", color = "") +
+  scale_x_date(date_breaks = "2 month") +
+  theme(axis.text.x=element_text(angle=60, hjust=1)) + 
+  scale_color_manual(values = c("gray50", "orange2"))+
+  ggtitle("RDA vs Macro 5 \n cor -0.18") 
+print(plt5)
+
+scale6 = 1/13
+plt6 <- ggplot(ts, aes(x = period, y = rda)) +
+  geom_line(aes(color = "RDA")) +
+  geom_line(aes(y = macro_6 * scale6, color = "sqrt(GDP)")) +
+  scale_y_continuous(sec.axis = sec_axis(~.*scale6, name="sqrt(GDP)")) +
+  labs(x = "Period (month)", y = "Score", color = "") +
+  scale_x_date(date_breaks = "2 month") +
+  theme(axis.text.x=element_text(angle=60, hjust=1)) + 
+  scale_color_manual(values = c("gray50", "orange2"))+
+  ggtitle("RDA vs sqrt(GDP) \n cor 0.16") 
+print(plt6)
+
+```
+
+
+
